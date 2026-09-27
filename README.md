@@ -66,6 +66,12 @@ Full §7.4 chain (diagnose → plan → backtest → best-or-ensemble → foreca
 uv run python scripts/forecast_agent_demo.py data/sample/air_passengers.csv 12
 ```
 
+Full graph (ingest → diagnose → plan → forecast → report, §7.6):
+
+```bash
+uv run python scripts/pipeline_demo.py data/sample/air_passengers.csv 12
+```
+
 ## Status
 
 | Phase | Scope | Status |
@@ -77,7 +83,7 @@ uv run python scripts/forecast_agent_demo.py data/sample/air_passengers.csv 12
 | 4 | Model zoo: mlforecast, neuralforecast | ✅ |
 | 5 | Foundation models (Chronos first) | ✅ |
 | 6 | Ensembling | ✅ |
-| 7 | LangGraph wiring | ⬜ |
+| 7 | LangGraph wiring | ✅ |
 | 8 | ReportAgent + FastAPI | ⬜ |
 | 9 | SQL/API connectors | ⬜ |
 
