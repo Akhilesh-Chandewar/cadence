@@ -92,6 +92,15 @@ class TestStationarity:
         st = compute_stationarity(np.full(20, 5.0))
         assert st["verdict"] == "ambiguous"
 
+    def test_perfect_repeat_does_not_crash_kpss_autolag(self):
+        """Regression: KPSS nlags='auto' overflows to inf on short perfect repeats
+        (e.g. REST-sourced periodic data). Must degrade to a verdict, not raise."""
+        y = np.tile([20.0, 21.0, 22.0, 23.0, 24.0], 6)  # 30 pts, perfectly repeating
+        st = compute_stationarity(y)
+        assert st["verdict"] in {"stationary", "non_stationary", "ambiguous"}
+        assert 0.0 <= st["adf_pvalue"] <= 1.0
+        assert 0.0 <= st["kpss_pvalue"] <= 1.0
+
 
 class TestOutliers:
     def test_injected_spike_is_flagged(self):

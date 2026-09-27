@@ -83,7 +83,12 @@ def compute_seasonality(y: np.ndarray, period: int) -> dict:
 
 
 def compute_stationarity(y: np.ndarray) -> dict:
-    """ADF (H0: unit root) AND KPSS (H0: stationary) — run both, per spec §7.2."""
+    """ADF (H0: unit root) AND KPSS (H0: stationary) — run both, per spec §7.2.
+
+    Degenerate series (short perfect repeats, zero-variance tails) can break the
+    tests' internal lag math (KPSS autolag overflows to inf); those fall back to
+    a fixed lag count, then to an `ambiguous` verdict rather than a crash.
+    """
     y = np.asarray(y, dtype=float)
     y = y[np.isfinite(y)]
     if len(y) < 8 or np.var(y) == 0:
@@ -91,9 +96,25 @@ def compute_stationarity(y: np.ndarray) -> dict:
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # KPSS p-value table-range warnings
-        adf_pvalue = float(adfuller(y, autolag="AIC")[1])
-        kpss_stat, kpss_pvalue, _, _ = kpss(y, regression="c", nlags="auto")
-        kpss_pvalue = float(kpss_pvalue)
+        try:
+            adf_pvalue: float | None = float(adfuller(y, autolag="AIC")[1])
+        except (ValueError, np.linalg.LinAlgError, OverflowError):
+            adf_pvalue = None
+        try:
+            kpss_pvalue: float | None = float(kpss(y, regression="c", nlags="auto")[1])
+        except (ValueError, np.linalg.LinAlgError, OverflowError):
+            # gamma_hat can be inf on perfectly-repeating series — retry fixed lag
+            try:
+                kpss_pvalue = float(kpss(y, regression="c", nlags=max(1, len(y) // 4))[1])
+            except (ValueError, np.linalg.LinAlgError, OverflowError):
+                kpss_pvalue = None
+
+    if adf_pvalue is None or kpss_pvalue is None:
+        return {
+            "adf_pvalue": 1.0 if adf_pvalue is None else round(adf_pvalue, 6),
+            "kpss_pvalue": 1.0 if kpss_pvalue is None else round(kpss_pvalue, 6),
+            "verdict": "ambiguous",
+        }
 
     adf_stationary = adf_pvalue < 0.05  # reject unit root
     kpss_stationary = kpss_pvalue >= 0.05  # fail to reject stationarity
