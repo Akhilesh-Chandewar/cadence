@@ -125,6 +125,10 @@ class ClassicalForecaster:
         sf = self._require_fitted()
         return sf.forecast(h=h, df=self._df, level=list(self.config.level))
 
+    def predict(self, h: int) -> pd.DataFrame:
+        """Zoo-wide alias for forecast() (Forecaster protocol, cadence/models/base.py)."""
+        return self.forecast(h=h)
+
     def cross_validation(
         self,
         h: int,

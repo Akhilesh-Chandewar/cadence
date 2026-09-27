@@ -35,6 +35,9 @@ uv run python scripts/diagnose_demo.py                    # seasonal fixture
 
 # planning: CSV → diagnostics → per-series model shortlist (§7.3 rule table)
 uv run python scripts/plan_demo.py data/sample/air_passengers.csv
+
+# model zoo: tiers 1–3 compared through one §9 scorer (ml/dl groups optional)
+uv run python scripts/zoo_demo.py data/sample/air_passengers.csv 12
 ```
 
 ## Status
@@ -45,7 +48,7 @@ uv run python scripts/plan_demo.py data/sample/air_passengers.csv
 | 1 | Classical MVP (statsforecast + rolling backtest + MASE/sMAPE) | ✅ |
 | 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ✅ |
 | 3 | PlannerAgent (rule table + optional LLM) | ✅ |
-| 4 | Model zoo: mlforecast, neuralforecast | ⬜ |
+| 4 | Model zoo: mlforecast, neuralforecast | ✅ |
 | 5 | Foundation models (Chronos first) | ⬜ |
 | 6 | Ensembling | ⬜ |
 | 7 | LangGraph wiring | ⬜ |

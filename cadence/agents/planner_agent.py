@@ -48,7 +48,7 @@ class CandidateModel(BaseModel):
 
     @property
     def is_available(self) -> bool:
-        return self.implemented_in_phase <= 2  # phases 0–2 are built; update as phases land
+        return self.implemented_in_phase <= 4  # phases 0–4 are built; update as phases land
 
 
 class ModelShortlist(BaseModel):

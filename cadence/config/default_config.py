@@ -29,6 +29,30 @@ class BacktestConfig(BaseModel):
     step_size: int = Field(default=1, ge=1)
 
 
+class MLModelConfig(BaseModel):
+    """Tier 2 (§8): MLForecast + LightGBM hyperparameters."""
+
+    lags: list[int] = Field(default_factory=lambda: [1, 2, 3, 7, 14])
+    # lag → rolling-mean window size (mlforecast wants transform *instances*;
+    # the config carries just the sizes and the wrapper constructs them)
+    rolling_mean_windows: dict[int, int] = Field(default_factory=lambda: {7: 3, 14: 3})
+    date_features: list[str] | None = None  # inferred from freq when None
+    # conformal-interval calibration horizon: predict(h) emits lo/hi columns for h <= this
+    interval_horizon: int = Field(default=24, ge=1)
+    num_leaves: int = Field(default=31, ge=2)
+    learning_rate: float = Field(default=0.05, gt=0, le=1)
+    n_estimators: int = Field(default=300, ge=1)
+
+
+class DLModelConfig(BaseModel):
+    """Tier 3 (§8): NeuralForecast deep-learning hyperparameters."""
+
+    models: list[str] = Field(default_factory=lambda: ["NHITS"])  # NHITS | TFT
+    input_size: int = Field(default=2 * 12, ge=2)  # 2x horizon is the common default
+    max_steps: int = Field(default=100, ge=1)  # kept small for CPU-friendly tests
+    scaler_type: str = "robust"
+
+
 class PlannerConfig(BaseModel):
     """Spec §7.3 — run config + rule-table thresholds."""
 
@@ -46,6 +70,8 @@ class CadenceConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
     planner: PlannerConfig = Field(default_factory=PlannerConfig)
+    ml: MLModelConfig = Field(default_factory=MLModelConfig)
+    dl: DLModelConfig = Field(default_factory=DLModelConfig)
     random_seed: int = 42
 
 
