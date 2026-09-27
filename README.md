@@ -24,11 +24,15 @@ Regenerate the committed sample fixtures (deterministic, seed 42) with:
 uv run python scripts/generate_fixtures.py
 ```
 
-End-to-end demo (CSV → rolling backtest → forecast + 95% intervals):
+End-to-end demos:
 
 ```bash
+# forecast: CSV → rolling backtest → forecast + 95% intervals
 uv run python scripts/forecast_demo.py                    # AirPassengers, h=12
-uv run python scripts/forecast_demo.py data/sample/synthetic_seasonal.csv 14
+
+# diagnostics: CSV → per-series stats + preprocessing plan (deterministic path)
+uv run python scripts/diagnose_demo.py                    # seasonal fixture
+uv run python scripts/diagnose_demo.py data/sample/air_passengers.csv
 ```
 
 ## Status
@@ -37,7 +41,7 @@ uv run python scripts/forecast_demo.py data/sample/synthetic_seasonal.csv 14
 |---|---|---|
 | 0 | Scaffolding: uv project, canonical schema, CSV connector, round-trip tests, fixtures | ✅ |
 | 1 | Classical MVP (statsforecast + rolling backtest + MASE/sMAPE) | ✅ |
-| 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ⬜ |
+| 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ✅ |
 | 3 | PlannerAgent (rule table + optional LLM) | ⬜ |
 | 4 | Model zoo: mlforecast, neuralforecast | ⬜ |
 | 5 | Foundation models (Chronos first) | ⬜ |
