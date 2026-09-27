@@ -8,13 +8,14 @@ CadenceState. Formats: json (the machine report), markdown, html.
 from __future__ import annotations
 
 import json
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from cadence.agents.report_agent import ReportAgent
+from cadence.api.uploads import UploadError, resolve_source_path, save_upload
 from cadence.config.default_config import CadenceConfig
 from cadence.graph.cadence_graph import run_pipeline, stream_pipeline
 
@@ -40,6 +41,10 @@ class ForecastRequest(BaseModel):
 
 
 def _run(source_config: dict, horizon: int, use_llm: bool = False) -> dict:
+    try:
+        source_config = resolve_source_path(source_config)
+    except UploadError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     cfg = CadenceConfig()
     cfg.forecast.horizon = horizon
     cfg.llm.enabled = use_llm  # §7.7: off by default; factory fails fast without a key
@@ -47,6 +52,18 @@ def _run(source_config: dict, horizon: int, use_llm: bool = False) -> dict:
         return run_pipeline(source_config, cfg)
     except Exception as exc:  # ingest failures raise by design (§7.6)
         raise HTTPException(status_code=400, detail=f"pipeline failed: {exc}") from exc
+
+
+@app.post("/data/upload")
+async def upload_data(file: Annotated[UploadFile, File()]):
+    """Upload a CSV/Parquet dataset; returns an upload_id for /forecast and
+    /pipeline/stream (source_config: {"upload_id": "..."})."""
+    try:
+        data = await file.read()
+        upload_id = save_upload(file.filename or "", data)
+    except UploadError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"upload_id": upload_id, "filename": file.filename, "bytes": len(data)}
 
 
 @app.post("/forecast")
@@ -67,7 +84,8 @@ def forecast(req: ForecastRequest):
 
 @app.get("/pipeline/stream")
 async def pipeline_stream(
-    path: str = Query(..., description="CSV/Parquet source path"),
+    path: str | None = Query(None, description="CSV/Parquet source path"),
+    upload_id: str | None = Query(None, description="id from POST /data/upload"),
     horizon: int = Query(12, ge=1, le=720),
     use_llm: bool = Query(False, description="enable §7.7 LLM arbitration"),
 ):
@@ -76,12 +94,18 @@ async def pipeline_stream(
     Event payload: {"type": "start|stage|done|error", "node"?, "checkpoint"?, "error"?}.
     Consumed by the Phase 10 UI pattern (or curl -N for a quick look).
     """
+    if not path and not upload_id:
+        raise HTTPException(status_code=400, detail="provide 'path' or 'upload_id'")
+    try:
+        source = resolve_source_path({"upload_id": upload_id} if upload_id else {"path": path})
+    except UploadError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     cfg = CadenceConfig()
     cfg.forecast.horizon = horizon
     cfg.llm.enabled = use_llm
 
     async def sse():
-        async for event in stream_pipeline({"path": path}, cfg):
+        async for event in stream_pipeline(source, cfg):
             yield f"data: {json.dumps(event, default=str)}\n\n"
 
     return StreamingResponse(sse(), media_type="text/event-stream")

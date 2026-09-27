@@ -161,6 +161,40 @@ and keyless local models via Ollama. Default provider is **Groq** (`openai/gpt-o
 
 ---
 
+## Upload your own data (production mode)
+
+**Via the UI** — open the Streamlit app, switch the sidebar radio to **“Upload a file”**, drop a
+CSV or Parquet file, pick a horizon, press **▶ Run pipeline**. Same live stage checkpoints.
+
+**Via the API:**
+
+```bash
+# 1) upload (CSV/Parquet, size-capped via CADENCE_MAX_UPLOAD_MB, default 200MB)
+UPLOAD_ID=$(curl -s -X POST localhost:8000/data/upload -F "file=@mydata.csv" | jq -r .upload_id)
+
+# 2) forecast from the stored upload
+curl -s -X POST localhost:8000/forecast -H 'content-type: application/json' \
+  -d "{\"source_config\": {\"upload_id\": \"$UPLOAD_ID\"}, \"horizon\": 12}"
+
+# 3) live stage stream for the same upload
+curl -N "localhost:8000/pipeline/stream?upload_id=$UPLOAD_ID&horizon=12"
+```
+
+Uploads are stored under an opaque id (no user-controlled paths reach the filesystem); the
+store lives in `CADENCE_UPLOAD_DIR` (default `/tmp/cadence-uploads`). Column mappings for
+non-canonical uploads can be combined: `{"upload_id": "...", "column_mapping": {...}}`.
+
+## Deploy with Docker
+
+```bash
+docker compose up --build
+# UI  → http://localhost:8501 (upload from the sidebar)
+# API → http://localhost:8000/docs
+```
+
+Both containers share an `uploads` volume and the CPU-only dependency set; set
+`GROQ_API_KEY` in the environment to enable LLM arbitration.
+
 ## Ingest sources (§6)
 
 All connectors emit the same canonical schema and pass the same validation:

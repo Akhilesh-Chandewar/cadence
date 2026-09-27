@@ -190,8 +190,21 @@ st.caption(
 
 with st.sidebar:
     st.header("Run settings")
-    default_path = "data/sample/air_passengers.csv"
-    path = st.text_input("CSV / Parquet path", value=default_path)
+
+    # ---- data source: upload a file OR point at a server-side path ----
+    source_mode = st.radio("Data source", ["Upload a file", "Server path"], horizontal=True)
+    uploaded_file = None
+    path = ""
+    if source_mode == "Upload a file":
+        uploaded_file = st.file_uploader(
+            "Upload your dataset",
+            type=["csv", "parquet"],
+            help="Canonical columns unique_id/ds/y — or anything mappable via a column mapping "
+            "in source_config. Max size set by CADENCE_MAX_UPLOAD_MB (default 200MB).",
+        )
+    else:
+        path = st.text_input("CSV / Parquet path", value="data/sample/air_passengers.csv")
+
     horizon = st.slider("Horizon", 1, 48, 12)
     use_llm = st.toggle(
         "§7.7 LLM arbitration",
@@ -201,17 +214,40 @@ with st.sidebar:
     run_clicked = st.button("▶ Run pipeline", type="primary", width="stretch")
     st.divider()
     st.caption(
-        "Specify a different source by editing `source_config` in the code — "
-        "SQL/REST connectors use the same graph."
+        "Server-path mode can also address SQL/REST sources by editing `source_config` — "
+        "all connectors flow through the same graph."
     )
 
 # keep the latest checkpoints in session state so rerenders keep the view
 state: dict = st.session_state.setdefault("_checkpoints", {})
 state.setdefault("errors", [])
 
+# resolve the chosen source into a concrete path before running
+source_path: str | None = None
+upload_error: str | None = None
 if run_clicked:
+    if source_mode == "Upload a file":
+        if uploaded_file is None:
+            upload_error = "Choose a CSV or Parquet file first (or switch to Server path mode)."
+        else:
+            try:
+                from cadence.api.uploads import save_upload
+
+                upload_id = save_upload(uploaded_file.name, uploaded_file.getvalue())
+                from cadence.api.uploads import resolve_upload
+
+                source_path = str(resolve_upload(upload_id))
+            except Exception as exc:  # noqa: BLE001 — surface upload problems in the UI
+                upload_error = f"{type(exc).__name__}: {exc}"
+    else:
+        source_path = path
+
+if upload_error:
+    st.sidebar.error(upload_error)
+
+if run_clicked and source_path:
     st.session_state["_checkpoints"] = {}
-    st.session_state["_source_path"] = path
+    st.session_state["_source_path"] = source_path
     state = st.session_state["_checkpoints"]
     state["errors"] = []
 
@@ -220,7 +256,9 @@ if run_clicked:
     cfg.llm.enabled = use_llm
 
     q: queue.Queue[dict | None] = queue.Queue()
-    worker = threading.Thread(target=_drain_events, args=({"path": path}, cfg, q), daemon=True)
+    worker = threading.Thread(
+        target=_drain_events, args=({"path": source_path}, cfg, q), daemon=True
+    )
     worker.start()
 
     progress = st.progress(0.0)

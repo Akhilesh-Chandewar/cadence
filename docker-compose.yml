@@ -1,0 +1,35 @@
+# Cadence — production deployment: API + Streamlit UI + upload volume
+#
+#   docker compose up --build
+#     UI   → http://localhost:8501   (upload your CSV in the sidebar)
+#     API  → http://localhost:8000/docs
+#
+# Set GROQ_API_KEY (or any provider key) to enable §7.7 LLM arbitration.
+
+services:
+  api:
+    build: .
+    command: uv run --no-sync uvicorn cadence.api.main:app --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+    environment:
+      - CADENCE_UPLOAD_DIR=/data/uploads
+      - CADENCE_MAX_UPLOAD_MB=200
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    volumes:
+      - uploads:/data/uploads
+
+  ui:
+    build: .
+    command: >
+      uv run --no-sync streamlit run cadence/ui/app.py
+      --server.address 0.0.0.0 --server.port 8501 --server.headless true
+    ports: ["8501:8501"]
+    environment:
+      - CADENCE_UPLOAD_DIR=/data/uploads
+      - CADENCE_MAX_UPLOAD_MB=200
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    volumes:
+      - uploads:/data/uploads
+
+volumes:
+  uploads:
