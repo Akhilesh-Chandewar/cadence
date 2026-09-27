@@ -26,16 +26,21 @@ app = FastAPI(
 class ForecastRequest(BaseModel):
     # v1 is local-first single-user (§3 non-goals); auth/tenancy comes with v2.
     source_config: dict = Field(
-        description='{"path": "...", "column_mapping": {...}?} — CSV/Parquet path '
-        "(SQL/API sources arrive with Phase 9's connectors)",
+        description='{"path": "..."} | {"connection_string": ..., "query"/"table": ..., '
+        '"column_mapping": {...}?} | {"url": ..., "records_path": ..., ...} — see §6',
     )
     horizon: int = Field(default=12, ge=1, le=720)
     format: Literal["json", "markdown", "html"] = "json"
+    use_llm: bool = Field(
+        default=False,
+        description="enable §7.7 LLM arbitration (requires a provider key in .env)",
+    )
 
 
-def _run(source_config: dict, horizon: int) -> dict:
+def _run(source_config: dict, horizon: int, use_llm: bool = False) -> dict:
     cfg = CadenceConfig()
     cfg.forecast.horizon = horizon
+    cfg.llm.enabled = use_llm  # §7.7: off by default; factory fails fast without a key
     try:
         return run_pipeline(source_config, cfg)
     except Exception as exc:  # ingest failures raise by design (§7.6)
@@ -44,7 +49,7 @@ def _run(source_config: dict, horizon: int) -> dict:
 
 @app.post("/forecast")
 def forecast(req: ForecastRequest):
-    state = _run(req.source_config, req.horizon)
+    state = _run(req.source_config, req.horizon, req.use_llm)
     report = state.get("report") or {}
     if req.format == "json":
         return {

@@ -45,6 +45,9 @@ dev = [
 llm = ["litellm>=1.50.0"]
 ml = ["mlforecast>=0.13.0", "lightgbm>=4.3.0"]
 dl = ["neuralforecast>=1.7.0"]
+ui = [
+    "streamlit>=1.64.0",
+]
 
 # Tier 3 runs on CPU here — pull torch from the CPU-only index so the dl group
 # doesn't drag in ~2.5GB of CUDA wheels (spec §14: CPU-only deployments must work).

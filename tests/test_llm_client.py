@@ -148,6 +148,7 @@ class FakeLiteLLM:
 
 class TestEndToEnd:
     async def test_complete_validates_schema(self, monkeypatch, tmp_path):
+        pytest.importorskip("litellm")  # optional dep group; skip when not synced
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
         monkeypatch.chdir(tmp_path)
         client = make_llm_client(LLMConfig(enabled=True, provider="openai", model="gpt-4o-mini"))
@@ -164,6 +165,7 @@ class TestEndToEnd:
         assert "JSON schema" in sent["messages"][-1]["content"]
 
     async def test_malformed_reply_raises_for_agent_retry(self, monkeypatch, tmp_path):
+        pytest.importorskip("litellm")  # optional dep group; skip when not synced
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
         monkeypatch.chdir(tmp_path)
         client = make_llm_client(LLMConfig(enabled=True, provider="openai", model="gpt-4o-mini"))

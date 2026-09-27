@@ -216,3 +216,31 @@ def run_pipeline(source_config: dict, config: CadenceConfig | None = None) -> di
     """Sync convenience entry: build + run the graph, return final CadenceState."""
     app = build_cadence_graph(config)
     return asyncio.run(app.ainvoke({"source_config": source_config, "errors": []}))
+
+
+async def stream_pipeline(source_config: dict, config: CadenceConfig | None = None):
+    """Yield per-node checkpoint events as the graph executes (Phase 10 UI).
+
+    Uses LangGraph's updates-stream mode: each node's returned dict IS the
+    checkpoint. DataFrame values (raw_df/cleaned_df) are stripped so every
+    event is json-safe; the per-series payloads (diagnostics, candidate_models,
+    forecasts, report, rendered, errors) flow through unchanged.
+    """
+    app = build_cadence_graph(config)
+    yield {"type": "start"}
+    try:
+        async for chunk in app.astream(
+            {"source_config": source_config, "errors": []},
+            stream_mode="updates",
+        ):
+            update = chunk[-1] if isinstance(chunk, tuple) else chunk
+            for node, node_update in (update or {}).items():
+                if not isinstance(node_update, dict):
+                    continue
+                checkpoint = {
+                    k: v for k, v in node_update.items() if not isinstance(v, pd.DataFrame)
+                }
+                yield {"type": "stage", "node": node, "checkpoint": checkpoint}
+        yield {"type": "done"}
+    except Exception as exc:  # noqa: BLE001 — stream the failure to the UI
+        yield {"type": "error", "error": f"{type(exc).__name__}: {exc}"}

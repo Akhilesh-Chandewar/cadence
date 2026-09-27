@@ -84,6 +84,24 @@ Ingest sources (§6): CSV/Parquet via `path`, SQL via `connection_string` + `que
 (+ optional `column_mapping`), REST via `url` (+ `records_path`, `page_param`/`size_param`
 or `next_path` pagination) — all validated into the same canonical schema.
 
+## Live pipeline UI (Phase 10)
+
+Streamlit dashboard where **every graph stage renders its checkpoint as it completes**:
+ingest metrics + source preview, per-series diagnostics (trend / seasonality /
+stationarity badges, preprocessing with the §7.7 LLM-vs-deterministic reason), the
+§7.3 shortlist, the §7.4 decision with ensemble weights + score table + forecast
+chart, the rendered report, and a raw checkpoint inspector.
+
+```bash
+uv sync --group ui
+uv run streamlit run cadence/ui/app.py
+```
+
+Toggle "§7.7 LLM arbitration" in the sidebar to run with the LLM enabled (needs a
+provider key in `.env`). The same event feed is available programmatically via
+`cadence.graph.cadence_graph.stream_pipeline` and as SSE at `GET /pipeline/stream`
+when the FastAPI app is running.
+
 ## Status
 
 | Phase | Scope | Status |
@@ -98,6 +116,7 @@ or `next_path` pagination) — all validated into the same canonical schema.
 | 7 | LangGraph wiring | ✅ |
 | 8 | ReportAgent + FastAPI | ✅ |
 | 9 | SQL/API connectors | ✅ |
+| 10 | Live pipeline UI (Streamlit; replaces the optional chat/Telegram v2 item) | ✅ |
 
-> Note: `scripts/` is a small addition to the spec §11 layout (fixture generation); everything
+> Note: `scripts/` and `cadence/ui/` are small additions to the spec §11 layout; everything
 > else follows the spec.
