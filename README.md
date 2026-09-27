@@ -60,6 +60,12 @@ uv sync --extra chronos   # + chronos-forecasting (transformers capped <5 for to
 CADENCE_TEST_CHRONOS=1 uv run pytest tests/test_foundation.py::TestRealWeights -q  # downloads weights
 ```
 
+Full §7.4 chain (diagnose → plan → backtest → best-or-ensemble → forecast):
+
+```bash
+uv run python scripts/forecast_agent_demo.py data/sample/air_passengers.csv 12
+```
+
 ## Status
 
 | Phase | Scope | Status |
@@ -70,7 +76,7 @@ CADENCE_TEST_CHRONOS=1 uv run pytest tests/test_foundation.py::TestRealWeights -
 | 3 | PlannerAgent (rule table + optional LLM) | ✅ |
 | 4 | Model zoo: mlforecast, neuralforecast | ✅ |
 | 5 | Foundation models (Chronos first) | ✅ |
-| 6 | Ensembling | ⬜ |
+| 6 | Ensembling | ✅ |
 | 7 | LangGraph wiring | ⬜ |
 | 8 | ReportAgent + FastAPI | ⬜ |
 | 9 | SQL/API connectors | ⬜ |

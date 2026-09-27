@@ -64,6 +64,16 @@ class ChronosConfig(BaseModel):
     torch_dtype: str = "float32"  # bfloat16 on GPU in production
 
 
+class ForecastConfig(BaseModel):
+    """Spec §7.4 — best-vs-ensemble decision + backtest shape."""
+
+    horizon: int = Field(default=12, ge=1)
+    n_windows: int = Field(default=3, ge=3)  # §9 minimum
+    winner_margin: float = Field(default=0.05, gt=0)  # "clear": best beats #2 by ≥5%
+    consistency_ratio: float = Field(default=0.7, gt=0, le=1)  # "consistent": window-win share
+    ensemble_top_k: int = Field(default=3, ge=2)  # members in the inverse-error ensemble
+
+
 class PlannerConfig(BaseModel):
     """Spec §7.3 — run config + rule-table thresholds."""
 
@@ -84,6 +94,7 @@ class CadenceConfig(BaseModel):
     ml: MLModelConfig = Field(default_factory=MLModelConfig)
     dl: DLModelConfig = Field(default_factory=DLModelConfig)
     chronos: ChronosConfig = Field(default_factory=ChronosConfig)
+    forecast: ForecastConfig = Field(default_factory=ForecastConfig)
     random_seed: int = 42
 
 
