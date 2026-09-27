@@ -144,6 +144,7 @@ class DiagnosticAgent:
             stationarity=stationarity,
             outlier_count=outlier_count,
             intermittent=intermittency["intermittent"],
+            zero_fraction=intermittency["zero_fraction"],
             recommended_preprocessing=decision,
         )
         return diag, cleaned

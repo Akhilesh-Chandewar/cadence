@@ -56,6 +56,7 @@ class SeriesDiagnostics(BaseModel):
     stationarity: dict
     outlier_count: int
     intermittent: bool
+    zero_fraction: float = 0.0
     recommended_preprocessing: PreprocessingDecision
 
 

@@ -12,23 +12,23 @@ UTC-normalized upstream in connectors/base.py).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 import pandas as pd
 from statsforecast import StatsForecast
-from statsforecast.models import AutoARIMA, AutoETS, AutoTheta, CrostonOptimized
+from statsforecast.models import TSB, AutoARIMA, AutoETS, AutoTheta, CrostonOptimized
 
-# Phase 1 registry (§7.3 shortlist names → statsforecast classes).
-# Croston is included now because intermittent demand (§7.3 row 2) needs no
-# season_length; TSB arrives with the intermittent path.
-# Note: statsforecast 2.x split `Croston` into variants — "Croston" maps to the
-# optimized variant, which is what the old class aliased.
-MODEL_REGISTRY: dict[str, type] = {
-    "AutoARIMA": AutoARIMA,
-    "AutoETS": AutoETS,
-    "AutoTheta": AutoTheta,
-    "Croston": CrostonOptimized,
+# Registry maps shortlist names → factories (season_length → configured model).
+# Factories let models with different signatures (TSB's required alphas, Croston's
+# missing season_length) share one call site in ClassicalForecaster.fit.
+MODEL_REGISTRY: dict[str, Callable[[int], Any]] = {
+    "AutoARIMA": lambda m: AutoARIMA(season_length=m, alias="AutoARIMA"),
+    "AutoETS": lambda m: AutoETS(season_length=m, alias="AutoETS"),
+    "AutoTheta": lambda m: AutoTheta(season_length=m, alias="AutoTheta"),
+    "Croston": lambda m: CrostonOptimized(alias="Croston"),
+    "TSB": lambda m: TSB(alpha_d=0.2, alpha_p=0.1, alias="TSB"),
 }
 
 DEFAULT_CLASSICAL_MODELS: tuple[str, ...] = ("AutoARIMA", "AutoETS")
@@ -109,13 +109,7 @@ class ClassicalForecaster:
         freq = self.config.freq or infer_frequency(work)
         season_length = self.config.season_length or infer_season_length(work, freq)
 
-        model_objs: list[Any] = []
-        for name in self.config.models:
-            cls = MODEL_REGISTRY[name]
-            if name == "Croston":
-                model_objs.append(cls(alias=name))  # no season_length parameter
-            else:
-                model_objs.append(cls(season_length=season_length, alias=name))
+        model_objs = [MODEL_REGISTRY[name](season_length) for name in self.config.models]
 
         self._df = work
         self._sf = StatsForecast(models=model_objs, freq=freq, n_jobs=-1)

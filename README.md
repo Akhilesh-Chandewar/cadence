@@ -32,7 +32,9 @@ uv run python scripts/forecast_demo.py                    # AirPassengers, h=12
 
 # diagnostics: CSV → per-series stats + preprocessing plan (deterministic path)
 uv run python scripts/diagnose_demo.py                    # seasonal fixture
-uv run python scripts/diagnose_demo.py data/sample/air_passengers.csv
+
+# planning: CSV → diagnostics → per-series model shortlist (§7.3 rule table)
+uv run python scripts/plan_demo.py data/sample/air_passengers.csv
 ```
 
 ## Status
@@ -42,7 +44,7 @@ uv run python scripts/diagnose_demo.py data/sample/air_passengers.csv
 | 0 | Scaffolding: uv project, canonical schema, CSV connector, round-trip tests, fixtures | ✅ |
 | 1 | Classical MVP (statsforecast + rolling backtest + MASE/sMAPE) | ✅ |
 | 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ✅ |
-| 3 | PlannerAgent (rule table + optional LLM) | ⬜ |
+| 3 | PlannerAgent (rule table + optional LLM) | ✅ |
 | 4 | Model zoo: mlforecast, neuralforecast | ⬜ |
 | 5 | Foundation models (Chronos first) | ⬜ |
 | 6 | Ensembling | ⬜ |

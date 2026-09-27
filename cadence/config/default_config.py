@@ -6,6 +6,8 @@ LLM settings follow §7.7: provider-agnostic strings plus a hard off-switch.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -27,9 +29,23 @@ class BacktestConfig(BaseModel):
     step_size: int = Field(default=1, ge=1)
 
 
+class PlannerConfig(BaseModel):
+    """Spec §7.3 — run config + rule-table thresholds."""
+
+    horizon: int = Field(default=12, ge=1)
+    scale: Literal["single", "many"] = "single"  # tens (interactive) vs thousands of series
+    has_covariates: bool = False
+    prefer_fast: bool = False  # "fast reasonable baseline now"
+    short_history: int = Field(default=200, ge=1)  # §7.3 "<~200 points"
+    long_history: int = Field(default=1000, ge=1)
+    ambiguous_window: float = Field(default=0.2, gt=0, lt=1)  # ±20% around a threshold = borderline
+    llm_arbitration: bool = True  # only effective when llm.enabled; planner-level off-switch
+
+
 class CadenceConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
+    planner: PlannerConfig = Field(default_factory=PlannerConfig)
     random_seed: int = 42
 
 
