@@ -72,6 +72,18 @@ Full graph (ingest → diagnose → plan → forecast → report, §7.6):
 uv run python scripts/pipeline_demo.py data/sample/air_passengers.csv 12
 ```
 
+HTTP API (§12 Phase 8) — serves the graph with JSON/Markdown/HTML report formats:
+
+```bash
+uv run uvicorn cadence.api.main:app --reload
+curl -X POST localhost:8000/forecast -H 'content-type: application/json' \
+  -d '{"source_config": {"path": "data/sample/air_passengers.csv"}, "horizon": 12, "format": "markdown"}'
+```
+
+Ingest sources (§6): CSV/Parquet via `path`, SQL via `connection_string` + `query`/`table`
+(+ optional `column_mapping`), REST via `url` (+ `records_path`, `page_param`/`size_param`
+or `next_path` pagination) — all validated into the same canonical schema.
+
 ## Status
 
 | Phase | Scope | Status |
@@ -84,8 +96,8 @@ uv run python scripts/pipeline_demo.py data/sample/air_passengers.csv 12
 | 5 | Foundation models (Chronos first) | ✅ |
 | 6 | Ensembling | ✅ |
 | 7 | LangGraph wiring | ✅ |
-| 8 | ReportAgent + FastAPI | ⬜ |
-| 9 | SQL/API connectors | ⬜ |
+| 8 | ReportAgent + FastAPI | ✅ |
+| 9 | SQL/API connectors | ✅ |
 
 > Note: `scripts/` is a small addition to the spec §11 layout (fixture generation); everything
 > else follows the spec.

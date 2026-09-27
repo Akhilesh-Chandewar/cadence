@@ -35,4 +35,5 @@ class CadenceState(TypedDict, total=False):
     backtest_scores: Annotated[dict[str, list], merge_dicts]  # per unique_id score rows
     forecasts: Annotated[dict[str, dict], merge_dicts]  # per unique_id forecast payloads
     report: dict
+    rendered: dict  # {"markdown": str, "html": str} — ReportAgent output (Phase 8)
     errors: Annotated[list[dict], operator.add]  # append-only accumulation

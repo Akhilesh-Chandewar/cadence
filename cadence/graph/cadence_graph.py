@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 
+import pandas as pd
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy
 
@@ -24,8 +25,10 @@ from cadence.agents.diagnostic_agent import SeriesDiagnostics as DiagnosticsMode
 from cadence.agents.forecast_agent import ForecastAgent
 from cadence.agents.planner_agent import ModelShortlist, PlannerAgent
 from cadence.config.default_config import CadenceConfig
-from cadence.connectors.base import CadenceError
+from cadence.connectors.api_connector import RESTConnector
+from cadence.connectors.base import CadenceError, SchemaValidationError
 from cadence.connectors.csv_connector import ColumnMapping, CSVConnector
+from cadence.connectors.sql_connector import SQLConnector
 from cadence.llm.litellm_client import auto_llm_config
 from cadence.state import CadenceState
 
@@ -48,14 +51,37 @@ def _err(stage: str, uid: str | None, exc: Exception) -> dict:
 def build_cadence_graph(config: CadenceConfig | None = None) -> object:
     """Compile the five-agent graph. Returns the compiled LangGraph app."""
     cfg = config or CadenceConfig(llm=auto_llm_config())
-    graph = StateGraph(CadenceState)
+    graph = StateGraph(
+        CadenceState
+    )  # ------------------------------------------------------------- 1. ingest
 
-    # ------------------------------------------------------------- 1. ingest
     async def ingest_node(state: CadenceState) -> dict:
         source = state.get("source_config") or {}
         mapping = source.get("column_mapping")
-        connector = CSVConnector(ColumnMapping(**mapping) if mapping else None)
-        frame = connector.load(source["path"])
+        col_map = ColumnMapping(**mapping) if mapping else None
+
+        if "path" in source:  # CSV/Parquet (§6 row 1)
+            frame = CSVConnector(col_map).load(source["path"])
+        elif "connection_string" in source:  # SQL (§6 row 2, Phase 9)
+            connector = SQLConnector(source["connection_string"], col_map)
+            frame = connector.load(query=source.get("query"), table=source.get("table"))
+        elif "url" in source:  # REST API (§6 row 3, Phase 9)
+            connector = RESTConnector(
+                url=source["url"],
+                mapping=col_map,
+                records_path=source.get("records_path"),
+                page_param=source.get("page_param"),
+                size_param=source.get("size_param"),
+                page_size=source.get("page_size", 500),
+                next_path=source.get("next_path"),
+                headers=source.get("headers"),
+            )
+            frame = connector.load()
+        else:
+            raise SchemaValidationError(
+                "source_config needs one of: 'path' (csv/parquet), "
+                "'connection_string' (sql), 'url' (rest api)"
+            )
         return {
             "raw_df": frame.df,
             "source_meta": frame.source_meta.model_dump(mode="json"),
@@ -108,17 +134,25 @@ def build_cadence_graph(config: CadenceConfig | None = None) -> object:
         if cleaned is None or cleaned.empty:
             return {"errors": [_err("forecast", None, RuntimeError("no cleaned data"))]}
         result = agent.run(cleaned, shortlists, transforms=transform_enum)
+
+        def _json_safe(rows: list[dict]) -> list[dict]:
+            """NaN is not JSON-compliant (pandas turns None wql into NaN) — null it."""
+            return [
+                {k: (None if isinstance(v, float) and pd.isna(v) else v) for k, v in row.items()}
+                for row in rows
+            ]
+
         payloads: dict[str, dict] = {}
         for out in result.outputs:
             payloads[out.unique_id] = {
                 "decision": out.decision,
                 "selected": out.selected,
                 "weights": out.weights,
-                "point": out.point.to_dict("records"),
-                "intervals": out.intervals.to_dict("records")
+                "point": _json_safe(out.point.to_dict("records")),
+                "intervals": _json_safe(out.intervals.to_dict("records"))
                 if out.intervals is not None
                 else None,
-                "scores": out.scores.to_dict("records"),
+                "scores": _json_safe(out.scores.to_dict("records")),
             }
         errors = [{**e, "stage": "forecast"} for e in result.errors]
         return {
@@ -129,6 +163,8 @@ def build_cadence_graph(config: CadenceConfig | None = None) -> object:
 
     # ------------------------------------------------------------- 5. report
     async def report_node(state: CadenceState) -> dict:
+        from cadence.agents.report_agent import ReportAgent
+
         forecasts = state.get("forecasts") or {}
         diagnostics = state.get("diagnostics") or {}
         report: dict[str, dict] = {}
@@ -152,7 +188,12 @@ def build_cadence_graph(config: CadenceConfig | None = None) -> object:
                 "forecast": fc["point"],
                 "intervals": fc["intervals"],
             }
-        return {"report": report}
+        agent = ReportAgent()
+        markdown = agent.render_markdown(report, state.get("source_meta"), state.get("errors"))
+        return {
+            "report": report,
+            "rendered": {"markdown": markdown, "html": agent.render_html(markdown)},
+        }
 
     retry = RetryPolicy(max_attempts=3, retry_on=_is_transient)
     graph.add_node("ingest", ingest_node, retry_policy=retry)
