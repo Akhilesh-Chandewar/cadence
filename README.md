@@ -24,12 +24,19 @@ Regenerate the committed sample fixtures (deterministic, seed 42) with:
 uv run python scripts/generate_fixtures.py
 ```
 
+End-to-end demo (CSV → rolling backtest → forecast + 95% intervals):
+
+```bash
+uv run python scripts/forecast_demo.py                    # AirPassengers, h=12
+uv run python scripts/forecast_demo.py data/sample/synthetic_seasonal.csv 14
+```
+
 ## Status
 
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Scaffolding: uv project, canonical schema, CSV connector, round-trip tests, fixtures | ✅ |
-| 1 | Classical MVP (statsforecast + rolling backtest + MASE/sMAPE) | ⬜ |
+| 1 | Classical MVP (statsforecast + rolling backtest + MASE/sMAPE) | ✅ |
 | 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ⬜ |
 | 3 | PlannerAgent (rule table + optional LLM) | ⬜ |
 | 4 | Model zoo: mlforecast, neuralforecast | ⬜ |
