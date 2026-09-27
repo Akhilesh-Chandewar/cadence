@@ -61,6 +61,28 @@ class TestUIImports:
         assert module.STAGES == ["ingest", "diagnose", "plan", "forecast", "report"]
 
 
+class TestRenderers:
+    """Execute every renderer against real checkpoints (Streamlit bare mode).
+
+    Regression guard: the import smoke test alone did NOT catch a
+    st.columns(4)-into-3-variables unpack crash inside _render_diagnose.
+    """
+
+    def test_renderers_execute_on_real_checkpoints(self, monkeypatch):
+        import cadence.ui.app as ui
+
+        events = _collect({"path": "data/sample/synthetic_seasonal.csv"})
+        by_node = {e["node"]: e["checkpoint"] for e in events if e["type"] == "stage"}
+
+        monkeypatch.setattr(ui.st, "session_state", {"_source_path": None}, raising=False)
+
+        ui._render_ingest(by_node["ingest"])
+        ui._render_diagnose(by_node["diagnose"])
+        ui._render_plan(by_node["plan"])
+        ui._render_forecast(by_node["forecast"])
+        ui._render_report(by_node["report"])
+
+
 class TestSSEEndpoint:
     def test_pipeline_stream_emits_events(self, tmp_path):
         import shutil

@@ -68,7 +68,7 @@ def _render_ingest(checkpoint: dict) -> None:
         try:
             preview = pd.read_csv(path)
             st.caption("source preview")
-            st.dataframe(preview.head(8), use_container_width=True, hide_index=True)
+            st.dataframe(preview.head(8), width="stretch", hide_index=True)
         except Exception:  # noqa: BLE001 — preview is best-effort
             pass
 
@@ -81,7 +81,7 @@ def _render_diagnose(checkpoint: dict) -> None:
                 f"**`{uid}`** — {diag.get('length')} points, freq `{diag.get('freq')}`, "
                 f"missing {diag.get('pct_missing', 0):.1%}"
             )
-            t, s, stn = st.columns(4)
+            t, s, stn = st.columns(3)
             with t:
                 _diag_badge("trend", diag.get("trend", {}), "trend")
             with s:
@@ -151,7 +151,7 @@ def _render_forecast(checkpoint: dict) -> None:
                     scores[["model", "mase_mean", "mase_max", "smape_mean", "wql"]].sort_values(
                         "mase_mean"
                     ),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             point = pd.DataFrame(fc.get("point") or [])
@@ -198,7 +198,7 @@ with st.sidebar:
         value=False,
         help="Needs a provider key in .env (Groq default). Off = deterministic fallbacks.",
     )
-    run_clicked = st.button("▶ Run pipeline", type="primary", use_container_width=True)
+    run_clicked = st.button("▶ Run pipeline", type="primary", width="stretch")
     st.divider()
     st.caption(
         "Specify a different source by editing `source_config` in the code — "

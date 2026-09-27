@@ -166,13 +166,18 @@ and keyless local models via Ollama. Default provider is **Groq** (`openai/gpt-o
 All connectors emit the same canonical schema and pass the same validation:
 
 ```python
-{"path": "data.csv"}                                    # CSV / Parquet
-{"path": "data.parquet", "column_mapping": {...}}       # renamed columns + covariates
+{"path": "data.csv"}  # CSV / Parquet
+{"path": "data.parquet", "column_mapping": {...}}  # renamed columns + covariates
 {"connection_string": "postgresql://...", "query": "SELECT ...", "column_mapping": {...}}
 {"connection_string": "sqlite:///shop.db", "table": "sales"}
-{"url": "https://api.example.com/reads", "records_path": "data",
- "page_param": "page", "size_param": "size", "column_mapping": {...}}
-{"url": "...", "next_path": "next"}                     # cursor/next-URL pagination
+{
+    "url": "https://api.example.com/reads",
+    "records_path": "data",
+    "page_param": "page",
+    "size_param": "size",
+    "column_mapping": {...},
+}
+{"url": "...", "next_path": "next"}  # cursor/next-URL pagination
 ```
 
 ## Data contract (§5)
