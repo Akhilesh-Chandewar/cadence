@@ -10,6 +10,11 @@ build/
 .pytest_cache/
 .ruff_cache/
 
+# Training artifacts (PyTorch Lightning)
+lightning_logs/
+checkpoints/
+*.ckpt
+
 # Environment / secrets
 .env
 
