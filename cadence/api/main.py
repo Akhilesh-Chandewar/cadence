@@ -7,14 +7,16 @@ CadenceState. Formats: json (the machine report), markdown, html.
 
 from __future__ import annotations
 
+import json
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from cadence.agents.report_agent import ReportAgent
 from cadence.config.default_config import CadenceConfig
-from cadence.graph.cadence_graph import run_pipeline
+from cadence.graph.cadence_graph import run_pipeline, stream_pipeline
 
 app = FastAPI(
     title="Cadence",
@@ -61,6 +63,28 @@ def forecast(req: ForecastRequest):
     if req.format == "markdown":
         return {"markdown": md}
     return {"html": ReportAgent().render_html(md)}
+
+
+@app.get("/pipeline/stream")
+async def pipeline_stream(
+    path: str = Query(..., description="CSV/Parquet source path"),
+    horizon: int = Query(12, ge=1, le=720),
+    use_llm: bool = Query(False, description="enable §7.7 LLM arbitration"),
+):
+    """Server-sent events: one checkpoint per graph node as it completes.
+
+    Event payload: {"type": "start|stage|done|error", "node"?, "checkpoint"?, "error"?}.
+    Consumed by the Phase 10 UI pattern (or curl -N for a quick look).
+    """
+    cfg = CadenceConfig()
+    cfg.forecast.horizon = horizon
+    cfg.llm.enabled = use_llm
+
+    async def sse():
+        async for event in stream_pipeline({"path": path}, cfg):
+            yield f"data: {json.dumps(event, default=str)}\n\n"
+
+    return StreamingResponse(sse(), media_type="text/event-stream")
 
 
 @app.get("/diagnostics/{unique_id}")

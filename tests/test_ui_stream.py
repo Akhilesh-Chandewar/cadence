@@ -59,3 +59,31 @@ class TestUIImports:
 
         module = importlib.import_module("cadence.ui.app")
         assert module.STAGES == ["ingest", "diagnose", "plan", "forecast", "report"]
+
+
+class TestSSEEndpoint:
+    def test_pipeline_stream_emits_events(self, tmp_path):
+        import shutil
+
+        from fastapi.testclient import TestClient
+
+        from cadence.api.main import app
+
+        shutil.copy("data/sample/synthetic_seasonal.csv", tmp_path / "s.csv")
+        client = TestClient(app)
+        with client.stream(
+            "GET",
+            "/pipeline/stream",
+            params={"path": str(tmp_path / "s.csv"), "horizon": 6},
+        ) as resp:
+            assert resp.status_code == 200
+            assert "text/event-stream" in resp.headers["content-type"]
+            body = "".join(resp.iter_text())
+
+        types = [
+            line.split(": ", 1)[1].split('"')[3]
+            for line in body.splitlines()
+            if line.startswith("data: ")
+        ]
+        assert types[0] == "start" and types[-1] == "done"
+        assert types.count("stage") == 5
