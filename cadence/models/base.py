@@ -18,14 +18,22 @@ class MissingDependencyError(ImportError):
 
 
 def require_group(module: str, group: str, package: str | None = None) -> None:
-    """Import `module`, raising an actionable error if the dependency group is missing."""
+    """Import `module`, raising an actionable error if the optional dependency is missing.
+
+    `group` is the pyproject dependency-group name, or "extra:<name>" for
+    [project.optional-dependencies] (e.g. the foundation-model tiers §8 Tier 4).
+    """
     try:
         __import__(module)
     except ModuleNotFoundError as exc:
         name = package or module.split(".")[0]
+        if group.startswith("extra:"):
+            hint = f"uv sync --extra {group.removeprefix('extra:')}"
+        else:
+            hint = f"uv sync --group {group}"
         raise MissingDependencyError(
             f"{name} is required for this tier but is not installed. "
-            f"Sync the optional dependency group with:  uv sync --group {group}"
+            f"Sync the optional dependency with:  {hint}"
         ) from exc
 
 

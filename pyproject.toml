@@ -29,7 +29,9 @@ packages = ["cadence"]
 # Spec §8: one extra per foundation model — never co-installed by default
 # (uni2ts/timesfm pull JAX, which can conflict with torch-based tiers).
 [project.optional-dependencies]
-chronos = ["chronos-forecasting>=1.5.0"]
+# transformers capped below 5.x: v5 requires torch>=2.5, conflicting with the
+# dl group's torch pin — 4.x works with both chronos and torch 2.4.
+chronos = ["chronos-forecasting>=1.5.0", "transformers>=4.48,<5"]
 moirai = ["uni2ts>=1.2.0"]
 timesfm = ["timesfm>=1.3.0"]
 darts = ["darts[torch]>=0.30.0"]

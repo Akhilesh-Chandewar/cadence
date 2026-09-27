@@ -49,8 +49,15 @@ uv run python scripts/diagnose_demo.py                    # seasonal fixture
 # planning: CSV → diagnostics → per-series model shortlist (§7.3 rule table)
 uv run python scripts/plan_demo.py data/sample/air_passengers.csv
 
-# model zoo: tiers 1–3 compared through one §9 scorer (ml/dl groups optional)
+# model zoo: all synced tiers compared through one §9 scorer
 uv run python scripts/zoo_demo.py data/sample/air_passengers.csv 12
+```
+
+Tier 4 zero-shot forecasting needs the chronos extra (spec §8):
+
+```bash
+uv sync --extra chronos   # + chronos-forecasting (transformers capped <5 for torch 2.4)
+CADENCE_TEST_CHRONOS=1 uv run pytest tests/test_foundation.py::TestRealWeights -q  # downloads weights
 ```
 
 ## Status
@@ -62,7 +69,7 @@ uv run python scripts/zoo_demo.py data/sample/air_passengers.csv 12
 | 2 | DiagnosticAgent (ADF/KPSS/STL/outliers) | ✅ |
 | 3 | PlannerAgent (rule table + optional LLM) | ✅ |
 | 4 | Model zoo: mlforecast, neuralforecast | ✅ |
-| 5 | Foundation models (Chronos first) | ⬜ |
+| 5 | Foundation models (Chronos first) | ✅ |
 | 6 | Ensembling | ⬜ |
 | 7 | LangGraph wiring | ⬜ |
 | 8 | ReportAgent + FastAPI | ⬜ |

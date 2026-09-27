@@ -73,6 +73,19 @@ def main() -> None:
     except MissingDependencyError as exc:
         print(f"tier 3 skipped: {exc}")
 
+    # Tier 4 — zero-shot foundation model
+    try:
+        from cadence.models.foundation import ChronosForecaster
+
+        print("tier 4: Chronos-Bolt (zero-shot)...")
+        fc = ChronosForecaster().fit(df)
+        cv = fc.cross_validation(h=horizon, n_windows=3)
+        tables.append(
+            score_cv(cv, "Chronos-Bolt", result.seasonality, df).assign(tier="foundation")
+        )
+    except MissingDependencyError as exc:
+        print(f"tier 4 skipped: {exc}")
+
     combined = pd.concat(tables, ignore_index=True)[
         ["tier", "model", "mase_mean", "smape_mean"]
     ].sort_values("mase_mean")

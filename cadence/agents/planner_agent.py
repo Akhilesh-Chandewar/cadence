@@ -30,7 +30,7 @@ _CATALOG: dict[str, tuple[str, int]] = {
     "N-HiTS": ("deep_learning", 4),
     "TFT": ("deep_learning", 4),
     "Chronos-Bolt": ("foundation", 5),
-    "Moirai": ("foundation", 5),
+    "Moirai": ("foundation", 6),  # deferred: multivariate/irregular cases only (§8)
 }
 
 
@@ -49,7 +49,7 @@ class CandidateModel(BaseModel):
 
     @property
     def is_available(self) -> bool:
-        return self.implemented_in_phase <= 4  # phases 0–4 are built; update as phases land
+        return self.implemented_in_phase <= 5  # phases 0–5 are built; update as phases land
 
 
 class ModelShortlist(BaseModel):

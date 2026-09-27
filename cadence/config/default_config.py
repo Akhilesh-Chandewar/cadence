@@ -56,6 +56,14 @@ class DLModelConfig(BaseModel):
     scaler_type: str = "robust"
 
 
+class ChronosConfig(BaseModel):
+    """Tier 4 (§8): Chronos-Bolt zero-shot foundation model."""
+
+    model_id: str = "amazon/chronos-bolt-small"  # bolt-small: fastest CPU default
+    device: str = "cpu"
+    torch_dtype: str = "float32"  # bfloat16 on GPU in production
+
+
 class PlannerConfig(BaseModel):
     """Spec §7.3 — run config + rule-table thresholds."""
 
@@ -75,6 +83,7 @@ class CadenceConfig(BaseModel):
     planner: PlannerConfig = Field(default_factory=PlannerConfig)
     ml: MLModelConfig = Field(default_factory=MLModelConfig)
     dl: DLModelConfig = Field(default_factory=DLModelConfig)
+    chronos: ChronosConfig = Field(default_factory=ChronosConfig)
     random_seed: int = 42
 
 
