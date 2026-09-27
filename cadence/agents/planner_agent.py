@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from cadence.agents.diagnostic_agent import SeriesDiagnostics
 from cadence.config.default_config import CadenceConfig
 from cadence.llm.client import LLMClient
+from cadence.llm.litellm_client import make_llm_client
 from cadence.models.classical import MODEL_REGISTRY
 
 # name → (tier, phase that implements it). Classical entries come from the registry.
@@ -165,7 +166,8 @@ def rule_table_shortlist(
 class PlannerAgent:
     def __init__(self, config: CadenceConfig | None = None, llm: LLMClient | None = None) -> None:
         self.config = config or CadenceConfig()
-        self.llm = llm
+        # §7.7 factory (same contract as DiagnosticAgent)
+        self.llm = llm if llm is not None else make_llm_client(self.config.llm)
 
     async def plan(self, diag: SeriesDiagnostics) -> ModelShortlist:
         candidates, hits, borderline = rule_table_shortlist(diag, self.config)

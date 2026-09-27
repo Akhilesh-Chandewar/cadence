@@ -15,6 +15,7 @@ from pathlib import Path
 from cadence.agents.diagnostic_agent import DiagnosticAgent
 from cadence.config.default_config import CadenceConfig
 from cadence.connectors.csv_connector import CSVConnector
+from cadence.llm.litellm_client import auto_llm_config
 
 
 async def main() -> None:
@@ -22,7 +23,11 @@ async def main() -> None:
     frame = CSVConnector().load(path)
     print(f"loaded {path}  rows={frame.source_meta.row_count}\n")
 
-    agent = DiagnosticAgent(CadenceConfig())  # LLM disabled → deterministic path
+    cfg = CadenceConfig(llm=auto_llm_config())  # LLM on iff a provider key is present
+    mode = f"ON — {cfg.llm.provider}/{cfg.llm.model}" if cfg.llm.enabled else "off (deterministic)"
+    print(f"llm: {mode}\n")
+
+    agent = DiagnosticAgent(cfg)
     result = await agent.diagnose(frame.df)
 
     for diag in result.diagnostics:

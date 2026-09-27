@@ -32,6 +32,7 @@ from cadence.agents.diagnostic_stats import (
 )
 from cadence.config.default_config import CadenceConfig
 from cadence.llm.client import LLMClient
+from cadence.llm.litellm_client import make_llm_client
 from cadence.models.classical import infer_frequency, infer_season_length
 
 
@@ -83,7 +84,9 @@ class DiagnosticAgent:
         llm: LLMClient | None = None,
     ) -> None:
         self.config = config or CadenceConfig()
-        self.llm = llm
+        # §7.7 factory: disabled config → DisabledLLMClient; enabled config →
+        # LiteLLM-backed client (fails fast at construction if no API key).
+        self.llm = llm if llm is not None else make_llm_client(self.config.llm)
 
     async def diagnose(self, df: pd.DataFrame) -> DiagnosticsResult:
         cleaned_parts: list[pd.DataFrame] = []

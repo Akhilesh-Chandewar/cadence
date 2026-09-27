@@ -17,5 +17,6 @@ checkpoints/
 
 # Environment / secrets
 .env
+.env.local
 
 # uv: the lockfile (uv.lock) is intentionally committed.

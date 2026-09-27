@@ -15,8 +15,11 @@ class LLMConfig(BaseModel):
     """Spec §7.7 — one injectable client, provider swap is config, disabled mode mandatory."""
 
     enabled: bool = False  # off by default: harness must work with no keys, no network
-    provider: str = "openai"  # any LiteLLM provider prefix
-    model: str = "gpt-4o-mini"  # resolved as f"{provider}/{model}" by LiteLLM
+    provider: str = "groq"  # project default (user choice); any LiteLLM prefix works
+    model: str = "openai/gpt-oss-120b"  # resolved as f"{provider}/{model}" by LiteLLM
+    api_key_env: str | None = None  # env var holding the key; per-provider default when None
+    temperature: float = Field(default=0.0, ge=0, le=2)
+    max_tokens: int = Field(default=1024, ge=1)
     max_retries: int = Field(default=3, ge=0)
     timeout_seconds: float = Field(default=60.0, gt=0)
 

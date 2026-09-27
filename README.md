@@ -18,6 +18,19 @@ uv sync --all-groups      # + llm, ml, dl dependency groups
 uv sync --extra chronos   # foundation-model tier, lightest first
 ```
 
+## LLM providers (§7.7)
+
+The DiagnosticAgent/PlannerAgent LLM calls run through one LiteLLM-backed client —
+**any** litellm-supported provider works, and the whole harness runs fine with the
+LLM disabled (deterministic fallbacks, the default).
+
+To enable it: `uv sync --group llm`, copy `.env.example` to `.env`, set the key for
+your provider, then verify the whole chain:
+
+```bash
+uv run python scripts/llm_smoke_test.py --provider anthropic --model claude-sonnet-4-5
+```
+
 Regenerate the committed sample fixtures (deterministic, seed 42) with:
 
 ```bash

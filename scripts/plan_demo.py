@@ -17,6 +17,7 @@ from cadence.agents.diagnostic_agent import DiagnosticAgent
 from cadence.agents.planner_agent import PlannerAgent
 from cadence.config.default_config import CadenceConfig
 from cadence.connectors.csv_connector import CSVConnector
+from cadence.llm.litellm_client import auto_llm_config
 
 
 async def main() -> None:
@@ -24,7 +25,10 @@ async def main() -> None:
     frame = CSVConnector().load(path)
     print(f"loaded {path}  rows={frame.source_meta.row_count}\n")
 
-    cfg = CadenceConfig()  # LLM disabled → deterministic rule table only
+    cfg = CadenceConfig(llm=auto_llm_config())  # LLM on iff a provider key is present
+    mode = f"ON — {cfg.llm.provider}/{cfg.llm.model}" if cfg.llm.enabled else "off (rule table)"
+    print(f"llm: {mode}\n")
+
     diag_result = await DiagnosticAgent(cfg).diagnose(frame.df)
 
     if diag_result.errors:
